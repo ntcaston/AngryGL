@@ -1,0 +1,6 @@
+# Build artefacts
+bazel-*
+
+# vim swap and temporary files
+*.swp
+*.swo
