@@ -43,12 +43,6 @@ glm::vec3 rotateByQuat(const glm::vec3& v, const glm::quat& q) {
   return partialHamiltonProduct(partialHamiltonProduct2(q, v), qPrime);
 }
 
-void logTimeSince(const std::string& label, std::chrono::time_point<std::chrono::high_resolution_clock> start) {
-  const auto x = std::chrono::high_resolution_clock::now();
-  const auto y = std::chrono::duration_cast<std::chrono::milliseconds>(x - start).count();
-  std::cout << label << y << "ms" << std::endl;
-}
-
 const float bulletScale = 0.3f;
 const float bulletLifetime = 1.0f; // seconds
 const glm::vec3 scaleVec(bulletScale, bulletScale, bulletScale);
@@ -75,6 +69,7 @@ const float bulletEnemyMaxCollisionDist =
 const float bulletEnemyMaxCollisionDist2 = bulletEnemyMaxCollisionDist * bulletEnemyMaxCollisionDist;
 
 bool bulletCollidesWithEnemy(const glm::vec3& bPos, const glm::vec3& bDir, const Enemy& e) {
+  // TODO anygrybots ECS actually just does sphere collision... which is much cheaper
   if (glm::distance2(bPos, e.position) > bulletEnemyMaxCollisionDist2) {
     return false;
   }
@@ -178,44 +173,37 @@ void BulletStore::createBullets(const glm::vec3& position, const glm::vec3& midD
 void BulletStore::updateBullets(float deltaTimeSeconds, std::vector<Enemy>* enemies, std::vector<SpritesheetSprite>* enemyDeathSprites) {
   // Bullet groups are divided into subgroups, which are excluded en masse from
   // enemy collision detection.
-  const int numSubGroups = 9;
+  const bool useAABB = enemies->size() > 0;
+  const int numSubGroups = useAABB ? 9 : 1;
 
-  // TODO get enemy subgroups working
-  const int numEnemySubGroups = std::min((size_t)1, enemies->size());
-  const int enemiesPerGroup = numEnemySubGroups == 0 ? 0 : enemies->size() / numEnemySubGroups;
-  std::vector<AABB> enemySubGroupAABBs(numEnemySubGroups);
-  for (int a = 0; a < numEnemySubGroups; ++a) {
-    for (int b = a * enemiesPerGroup; b < (enemiesPerGroup * a + enemiesPerGroup); ++b) {
-      enemySubGroupAABBs[a].expandToInclude((*enemies)[b].position);
-    }
-  }
+  const float deltaPosMagnitude = deltaTimeSeconds * bulletSpeed;
+  int firstLiveBulletGroup = 0;
 
-  const float deltaPos = deltaTimeSeconds * bulletSpeed;
-  int firstLiveGroup = 0;
-  int deadEnemiesStart = enemies->size();
+  // True iff enemies[i] is dead from bullet collision.
   std::vector<bool> enemyDeathMarker(enemies->size());
+
   std::vector<std::future<void>> futures;
   for (BulletGroup& g : bulletGroups) {
     g.TTL -= deltaTimeSeconds;
     if (g.TTL <= 0.0f) {
-      firstLiveGroup++;
+      firstLiveBulletGroup++;
     } else {
-      futures.emplace_back(threadPool->enqueue([this, &enemySubGroupAABBs, enemiesPerGroup, numSubGroups, enemyDeathSprites, deltaPos, &enemies, &g, &enemyDeathMarker]() {
+      futures.emplace_back(threadPool->enqueue([this, numSubGroups, useAABB, deltaPosMagnitude, &enemies, &g, &enemyDeathMarker]() {
         const int bulletGroupStartIdx = g.startIndex;
         const int numBulletsInGroup = g.groupSize;
         const int subgroupSize = numBulletsInGroup / numSubGroups;
-        const bool useAABB = enemies->size() > 0;
         for (int subgroup = 0; subgroup < numSubGroups; ++subgroup) {
           int bulletsStart = subgroupSize * subgroup;
           int bulletsEnd = (subgroup == (numSubGroups - 1)) ? numBulletsInGroup : (bulletsStart + subgroupSize);
           bulletsStart += bulletGroupStartIdx;
           bulletsEnd += bulletGroupStartIdx;
 
+          for (int bulletIdx = bulletsStart; bulletIdx < bulletsEnd; ++bulletIdx) {
+            allBulletPositions[bulletIdx] += allBulletDirs[bulletIdx] * deltaPosMagnitude;
+          }
+
           // Bullet subgroup AABB
           AABB subgroupBoundingBox;
-          for (int bulletIdx = bulletsStart; bulletIdx < bulletsEnd; ++bulletIdx) {
-            allBulletPositions[bulletIdx] += allBulletDirs[bulletIdx] * deltaPos;
-          }
           if (useAABB) {
             for (int bulletIdx = bulletsStart; bulletIdx < bulletsEnd; ++bulletIdx) {
               subgroupBoundingBox.expandToInclude(allBulletPositions[bulletIdx]);
@@ -223,22 +211,16 @@ void BulletStore::updateBullets(float deltaTimeSeconds, std::vector<Enemy>* enem
             subgroupBoundingBox.expandBy(bulletEnemyMaxCollisionDist);
           }
 
-          for (int s = 0; s < enemySubGroupAABBs.size(); ++s) {
-            if (!AABBsIntersect(enemySubGroupAABBs[s], subgroupBoundingBox)) {
-              //continue;
+          for (int i = 0; i < enemies->size(); ++i) {
+            const Enemy& e = enemies->at(i);
+            if (useAABB && !subgroupBoundingBox.containsPoint(e.position)) {
+              continue;
             }
-            for (int i = s * enemiesPerGroup; i < (s * enemiesPerGroup + enemiesPerGroup); ++i) {
-              const Enemy& e = enemies->at(i);
-              if (useAABB && !subgroupBoundingBox.containsPoint(e.position)) {
-                continue;
-              }
-              for (int bulletIdx = bulletsStart; bulletIdx < bulletsEnd; ++bulletIdx) {
-                if (bulletCollidesWithEnemy(allBulletPositions[bulletIdx], allBulletDirs[bulletIdx], e)) {
-                  // TODO kill bullet too?
-                  enemyDeathSprites->emplace_back(e.position);
-                  enemyDeathMarker[i] = true;
-                  break;
-                }
+            for (int bulletIdx = bulletsStart; bulletIdx < bulletsEnd; ++bulletIdx) {
+              if (bulletCollidesWithEnemy(allBulletPositions[bulletIdx], allBulletDirs[bulletIdx], e)) {
+                // TODO kill bullet too? ... angry bots ECS version doesn't...
+                enemyDeathMarker[i] = true;
+                break;
               }
             }
           }
@@ -250,9 +232,9 @@ void BulletStore::updateBullets(float deltaTimeSeconds, std::vector<Enemy>* enem
     future.get();
   }
   int firstLivingBullet = 0;
-  if (firstLiveGroup != 0) {
-    firstLivingBullet = bulletGroups[firstLiveGroup - 1].startIndex + bulletGroups[firstLiveGroup - 1].groupSize;
-    bulletGroups.erase(bulletGroups.begin(), bulletGroups.begin() + firstLiveGroup);
+  if (firstLiveBulletGroup != 0) {
+    firstLivingBullet = bulletGroups[firstLiveBulletGroup - 1].startIndex + bulletGroups[firstLiveBulletGroup - 1].groupSize;
+    bulletGroups.erase(bulletGroups.begin(), bulletGroups.begin() + firstLiveBulletGroup);
   }
   if (firstLivingBullet != 0) {
     allBulletPositions.erase(allBulletPositions.begin(), allBulletPositions.begin() + firstLivingBullet);
@@ -264,17 +246,16 @@ void BulletStore::updateBullets(float deltaTimeSeconds, std::vector<Enemy>* enem
   }
   for (int i = (enemies->size() - 1); i >= 0; --i) {
     if (enemyDeathMarker[i]) {
+      enemyDeathSprites->emplace_back((*enemies)[i].position);
       enemies->erase(enemies->begin() + i);
     }
   }
 }
 
-void BulletStore::renderBulletSprites(bool isMeasuredFrame, unsigned int shaderId) {
+void BulletStore::renderBulletSprites() {
   if (bulletGroups.size() == 0) {
     return;
   }
-  const auto frameStart = std::chrono::high_resolution_clock::now();
-
   glBindVertexArray(VAO);
 
   glBindBuffer(GL_ARRAY_BUFFER, instanceVBO);
@@ -284,8 +265,4 @@ void BulletStore::renderBulletSprites(bool isMeasuredFrame, unsigned int shaderI
 
   glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * allBulletPositions.size(), &allBulletPositions[0], GL_STREAM_DRAW);
   glDrawElementsInstanced(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0, allBulletPositions.size());
-
-  if (isMeasuredFrame) {
-    logTimeSince("    matrix draw call complete: ", frameStart);
-  }
 }

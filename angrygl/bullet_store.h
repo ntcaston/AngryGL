@@ -16,7 +16,7 @@ public:
 
   void updateBullets(float deltaTimeSeconds, std::vector<Enemy>* enemies, std::vector<SpritesheetSprite>* enemyDeathSprites);
 
-  void renderBulletSprites(bool isMeasuredFrame, unsigned int shaderId);
+  void renderBulletSprites();
  private:
   std::vector<glm::vec3> allBulletPositions;
   std::vector<glm::quat> allQuats;

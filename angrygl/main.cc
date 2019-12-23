@@ -848,11 +848,9 @@ int main(int argc, const char **argv) {
       instancedTextureShader.use();
       instancedTextureShader.setInt("texture_diffuse", texUnit_bullet);
       instancedTextureShader.setBool("useLight", false);
-      instancedTextureShader.setBool("brighten", false);
       glUniformMatrix4fv(glGetUniformLocation(instancedTextureShader.id, "PV"), 1,
                          GL_FALSE, glm::value_ptr(PV));
-      bulletStore.renderBulletSprites(isMeasuredFrame, instancedTextureShader.id);
-      instancedTextureShader.setBool("brighten", false);
+      bulletStore.renderBulletSprites();
       glDisable(GL_BLEND);
       glDepthMask(GL_TRUE);
     };
