@@ -105,6 +105,12 @@ void PlayerModel::loadModel(std::string path) {
   glGenBuffers(1, &nodeVBO);
 }
 
+void PlayerModel::setPlayerDead(float time) {
+  if (deathTime < 0.0f) {
+    deathTime = time;
+  }
+}
+
 void PlayerModel::UpdatePointsForAnim(
     const bool isMeasuredFrame,
     const glm::vec2 movementDir,
@@ -119,15 +125,18 @@ void PlayerModel::UpdatePointsForAnim(
       const float weight,
       const float minTicks,
       const float maxTicks,
-      const float tickOffset) {
+      const float tickOffset,
+      // For non-looped
+      const float* opt_animStart = nullptr) {
     if (weight == 0.0f) {
       return;
     }
     const float tickRange = maxTicks - minTicks;
-    float targetAnimTicks =
-        fmod(time * anim->mTicksPerSecond + tickOffset, tickRange);
+    float targetAnimTicks = opt_animStart
+        ? std::min((float)((time - *opt_animStart) * anim->mTicksPerSecond + tickOffset), tickRange)
+        : fmod(time * anim->mTicksPerSecond + tickOffset, tickRange);
     targetAnimTicks += minTicks;
-    if (targetAnimTicks < minTicks || targetAnimTicks > maxTicks) {
+    if (targetAnimTicks < (minTicks - 0.01f) || targetAnimTicks > (maxTicks + 0.01f)) {
       std::cerr << targetAnimTicks << std::endl;
       exit(1);
     }
@@ -143,7 +152,7 @@ void PlayerModel::UpdatePointsForAnim(
           localNodeTransform.second * weight;
     }
   };
-  const bool isPlayerMoving = glm::length(glm::normalize(movementDir)) > 0.1f;
+  const bool isPlayerMoving = glm::length(movementDir) > 0.1f;
   const float movementTheta = atan(movementDir.x / movementDir.y) + (movementDir.y < 0.0f ? 3.14f : 0.0f);
   const float thetaDelta = movementTheta - aimTheta;
   const glm::vec2 movementAnim(sin(thetaDelta), cos(thetaDelta));
@@ -156,13 +165,15 @@ void PlayerModel::UpdatePointsForAnim(
   prev_forwardWeight = std::max(0.0f, prev_forwardWeight - deltaTime / animTransitionTime);
   prev_backWeight = std::max(0.0f, prev_backWeight - deltaTime / animTransitionTime);
 
-  const float deathWeight = 0.0f;
-  float idleWeight = prev_idleWeight + (isPlayerMoving ? 0.0f : 1.0f);
+  const bool isDead = deathTime >= 0.0f;
+  float deathWeight = isDead ? 1.0f : 0.0f;
+  float idleWeight = prev_idleWeight + ((isDead || isPlayerMoving) ? 0.0f : 1.0f);
   float rightWeight = prev_rightWeight + (isPlayerMoving ? std::max(0.0f, -movementAnim.x) : 0.0f);
   float forwardWeight = prev_forwardWeight + (isPlayerMoving ? std::max(0.0f, movementAnim.y) : 0.0f);
   float backWeight = prev_backWeight + (isPlayerMoving ? std::max(0.0f, -movementAnim.y) : 0.0f);
   float leftWeight = prev_leftWeight + (isPlayerMoving ? std::max(0.0f, movementAnim.x) : 0.0f);
   const float weightSum = deathWeight + idleWeight + rightWeight + forwardWeight + backWeight + leftWeight;
+  deathWeight /= weightSum;
   idleWeight /= weightSum;
   rightWeight /= weightSum;
   forwardWeight /= weightSum;
@@ -185,8 +196,7 @@ void PlayerModel::UpdatePointsForAnim(
     exit(1);
   }
 
-  // TODO need to be caseful with offset for death
-  processAnim(deathWeight, 234.0f, 293.0f, 0.0f);
+  processAnim(deathWeight, 234.0f, 293.0f, 0.0f, &deathTime);
   processAnim(idleWeight, 55.0f, 130.0f, 0.0f);
   const float movementAnimDur = 20.0f;
   processAnim(forwardWeight, 134.0f, 134.0f + movementAnimDur, 0.0f);

@@ -20,6 +20,7 @@ public:
 
   void Draw(Shader shader, bool applyTextures = true) const;
   unsigned int GetNodeVAO() const;
+  void setPlayerDead(float time);
   void UpdatePointsForAnim(
       bool isMeasuredFrame,
       const glm::vec2 movementDir,
@@ -29,6 +30,7 @@ public:
 
   std::vector<PlayerMesh> meshes;
 private:
+  float deathTime = -1.0f;
   glm::mat4 gunTransform;
   unsigned int nodeVAO;
   unsigned int nodeVBO;

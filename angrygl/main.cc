@@ -71,6 +71,7 @@ const int spreadAmount = 20;
 const float playerSpeed = 1.5f;
 const float playerCollisionRadius = 0.35f;
 bool isAlive = true;
+float aimTheta = 0.0f;
 
 // Frame timing
 float deltaTime = 0.0f;
@@ -163,6 +164,7 @@ void chasePlayer(const float deltaTime, std::vector<Enemy>* enemies) {
       if (dist <= (playerCollisionRadius + ENEMY_COLLIDER.radius)) {
         std::cout << "GOTTEM!" << std::endl;
         isAlive = false;
+        playerMovementDir = glm::vec2(0.0f, 0.0f);
       }
     }
   }
@@ -759,6 +761,9 @@ int main(int argc, const char **argv) {
     if (isAlive) {
       enemySpawner.update(playerPosition, deltaTime);
       chasePlayer(deltaTime, &enemies);
+      if (!isAlive) {
+        playerModel.setPlayerDead(timeSinceStart);
+      }
     }
     if (isMeasuredFrame) {
       logTimeSince("enemies updated: ", frameStart);
@@ -769,39 +774,39 @@ int main(int argc, const char **argv) {
         glm::lookAt(cameraPos, playerPosition, cameraUp);
     const glm::mat4 PV = projTransform * viewTransform;
 
-    // TODO extract to helper fn
-    // Aiming
-    // Map from screen (clip) coords back to world coords for an infinite plane
-    // at monsterY.
-    // TODO it'd probably be simpler to do a line intersection from camera pos
-    // to the plane along the direction vector. Probably faster too (no matrix
-    // inverse).
-    const glm::mat4 inv = glm::inverse(viewTransform) * projInv;
-    const float t = (inv[0][1] * mouseClipX + inv[1][1] * mouseClipY + inv[3][1] - monsterY *
-             (inv[0][3] * mouseClipX + inv[1][3] * mouseClipX + inv[3][3])) /
-        (inv[2][3] * monsterY - inv[2][1]);
-    const float s = 1.0f / (inv[0][3] * mouseClipX + inv[1][3] * mouseClipY + inv[2][3] * t + inv[3][3]);
-    const float us = mouseClipX * s;
-    const float vs = mouseClipY * s;
-    const float ts = t * s;
-    const float worldX = inv[0][0] * us + inv[1][0] * vs + inv[2][0] * ts + inv[3][0] * s;
-    const float worldZ = inv[0][2] * us + inv[1][2] * vs + inv[2][2] * ts + inv[3][2] * s;
+    float dx = 0.0f;
+    float dz = 0.0f;
+    if (isAlive) {
+      // TODO extract to helper fn
+      // Aiming
+      // Map from screen (clip) coords back to world coords for an infinite plane
+      // at monsterY.
+      // TODO it'd probably be simpler to do a line intersection from camera pos
+      // to the plane along the direction vector. Probably faster too (no matrix
+      // inverse).
+      const glm::mat4 inv = glm::inverse(viewTransform) * projInv;
+      const float t = (inv[0][1] * mouseClipX + inv[1][1] * mouseClipY + inv[3][1] - monsterY *
+               (inv[0][3] * mouseClipX + inv[1][3] * mouseClipX + inv[3][3])) /
+          (inv[2][3] * monsterY - inv[2][1]);
+      const float s = 1.0f / (inv[0][3] * mouseClipX + inv[1][3] * mouseClipY + inv[2][3] * t + inv[3][3]);
+      const float us = mouseClipX * s;
+      const float vs = mouseClipY * s;
+      const float ts = t * s;
+      const float worldX = inv[0][0] * us + inv[1][0] * vs + inv[2][0] * ts + inv[3][0] * s;
+      const float worldZ = inv[0][2] * us + inv[1][2] * vs + inv[2][2] * ts + inv[3][2] * s;
 
-    // Calculate aim rotation.
-    const float dx = worldX - playerPosition.x;
-    const float dz = worldZ - playerPosition.z;
-    float aimTheta = atan(dx / dz) + (dz < 0.0f ? pi : 0.0f);
-    if (abs(mouseClipX) < 0.005f && abs(mouseClipY) < 0.005f) {
-      // TODO shortcut earlier once extracted to helper fn
-      aimTheta = 0;
-    }
-    if (!isAlive) {
-      // TODO should really persist from prev frame
-      aimTheta = 0.0f;
-    }
+      // Calculate aim rotation.
+      dx = worldX - playerPosition.x;
+      dz = worldZ - playerPosition.z;
+      aimTheta = atan(dx / dz) + (dz < 0.0f ? pi : 0.0f);
+      if (abs(mouseClipX) < 0.005f && abs(mouseClipY) < 0.005f) {
+        // TODO shortcut earlier once extracted to helper fn
+        aimTheta = 0;
+      }
 
-    if (isMeasuredFrame) {
-      logTimeSince("aim resolved: ", frameStart);
+      if (isMeasuredFrame) {
+        logTimeSince("aim resolved: ", frameStart);
+      }
     }
     glm::vec3 muzzleWorldPos3;
     bool usePointLight = false;
