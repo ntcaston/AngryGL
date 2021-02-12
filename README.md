@@ -12,4 +12,9 @@ The project is built using [bazel](https://docs.bazel.build/versions/master/wind
 
 **NOTE:** None of the original assets from Unity's project have been included, you'll need to copy them into the appropriate directories if you want to run the project yourself.
 
-Project can be built with `bazel build -c opt angrygl:main` and the resulting binary can be found at `bazel-bin/angrygl/main.exe`
+Project can be built with `bazel build -c opt angrygl:main` and the resulting binary can be found at `bazel-bin/angrygl/main.exe`. The binary assumes that it's being run from the root directory. So build and run would be
+
+```
+// From root dir with WORKSPACE in it
+bazel build -c opt angrygl:main && ./bazel-bin/angrygl/main.exe
+```
