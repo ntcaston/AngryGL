@@ -21,4 +21,13 @@ bazel build -c opt angrygl:main && ./bazel-bin/angrygl/main.exe
 
 # Dependencies
 
-irrKlang was used as the audio library. I don't believe the license allows for including the library in this repo so audio is disabled. The code which uses the audio is still there but ifdef'd out to show how it was done.
+[irrKlang](https://www.ambiera.com/irrklang/index.html) was used as the audio library. I don't believe the license allows for including the library in this repo so audio is disabled. The code which uses the audio is still there but ifdef'd out to show how it was done.
+
+The following libraries were used:
+
+* [stb image](https://github.com/nothings/stb/blob/master/stb_image.h)
+* [assimp](https://github.com/assimp/assimp)
+* [glad](https://github.com/Dav1dde/glad)
+* [ThreadPool](https://github.com/progschj/ThreadPool)
+* [glm](https://github.com/g-truc/glm)
+* [glfw](https://github.com/glfw/glfw)
