@@ -18,3 +18,7 @@ Project can be built with `bazel build -c opt angrygl:main` and the resulting bi
 // From root dir with WORKSPACE in it
 bazel build -c opt angrygl:main && ./bazel-bin/angrygl/main.exe
 ```
+
+# Dependencies
+
+irrKlang was used as the audio library. I don't believe the license allows for including the library in this repo so audio is disabled. The code which uses the audio is still there but ifdef'd out to show how it was done.

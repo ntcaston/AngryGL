@@ -4,3 +4,27 @@ bazel-*
 # vim swap and temporary files
 *.swp
 *.swo
+
+# Copyrighted assets
+angrygl/assets/Player/Player.fbx
+angrygl/assets/Player/Textures/Gun_D.tga
+angrygl/assets/Player/Textures/Gun_E.tga
+angrygl/assets/Player/Textures/Gun_M.tga
+angrygl/assets/Player/Textures/Gun_NRM.tga
+angrygl/assets/Player/Textures/Player_D.tga
+angrygl/assets/Player/Textures/Player_E.tga
+angrygl/assets/Player/Textures/Player_M.tga
+angrygl/assets/Player/Textures/Player_NRM.tga
+angrygl/assets/bullet/BulletTexture2.png
+angrygl/assets/bullet_hit_metal_enemy_4.wav
+angrygl/assets/floor/Floor_D.psd
+angrygl/assets/floor/Floor_M.psd
+angrygl/assets/floor/Floor_N.psd
+angrygl/assets/player_shooting.wav
+angrygl/assets/player_shooting_one.wav
+angrygl/assets/wiggly_boi/EelDog.FBX
+angrygl/assets/wiggly_boi/Eeldog_Albedo.png
+angrygl/assets/wiggly_boi/Eeldog_Normal.tif
+
+# irrklang
+irrklang/

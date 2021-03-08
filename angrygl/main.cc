@@ -1,3 +1,5 @@
+#define SD_ENABLE_IRRKLANG 0
+
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -18,7 +20,10 @@
 #include "lib/ThreadPool.h"
 #include "angrygl/model.h"
 #include "stb/image.h"
+
+#if SD_ENABLE_IRRKLANG
 #include "irrklang/include/irrKlang.h"
+#endif
 
 #define _USE_MATH_DEFINES
 #include <math.h>
@@ -312,7 +317,7 @@ void bindLoadedTexture(LoadedTexture& texture) {
 
     stbi_image_free(data);
   } else {
-    std::cerr << stbi_failure_reason() << std::endl;
+    std::cerr << "bindLoadedTexture failed " << stbi_failure_reason() << std::endl;
     stbi_image_free(data);
     exit(1);
   }
@@ -401,6 +406,7 @@ int main(int argc, const char **argv) {
   glfwSetCursorPosCallback(window, cursorPositionCallback);
   glfwSetMouseButtonCallback(window, mouseButtonCallback);
 
+#if SD_ENABLE_IRRKLANG
   irrklang::ISoundEngine* const soundEngine = irrklang::createIrrKlangDevice();
   auto* const fireSound = soundEngine->addSoundSourceFromFile(
       "angrygl/assets/player_shooting_one.wav",
@@ -413,6 +419,7 @@ int main(int argc, const char **argv) {
   ding->setDefaultVolume(0.5f);
 
   logTimeSince("audio loaded ", appStart);
+#endif
 
   unsigned int obnoxiousQuadVAO;
   glGenVertexArrays(1, &obnoxiousQuadVAO);
@@ -751,9 +758,11 @@ int main(int argc, const char **argv) {
     {
       const int origEnemyCount = enemies.size();
       bulletStore.updateBullets(deltaTime, &enemies, &bulletImpactSprites);
+#if SD_ENABLE_IRRKLANG
       if (enemies.size() < origEnemyCount) {
         soundEngine->play2D(ding, false);
       }
+#endif
     }
     if (isMeasuredFrame) {
       logTimeSince("updateBullets complete: ", frameStart);
@@ -837,7 +846,9 @@ int main(int argc, const char **argv) {
       const auto bulletSpawnStart = std::chrono::high_resolution_clock::now();
       const glm::vec4 midDir = glm::normalize(glm::vec4(dx, 0.0f, dz, 1.0f));
       bulletStore.createBullets(projectileSpawnPoint, midDir, spreadAmount);
+#if SD_ENABLE_IRRKLANG
       soundEngine->play2D(fireSound, false);
+#endif
       lastFireTime = currentFrame;
       muzzleFlashSpritesAge.emplace_back(0.0f);
       // logTimeSince("       bullet spawn time: ", bulletSpawnStart);

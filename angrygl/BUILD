@@ -129,7 +129,7 @@ cc_binary(
         ":model",
         "//stb:image",
         "//lib:threadpool",
-        "//irrklang:irrklang",
+        #"//irrklang:irrklang",
         "@glfw//:include",
         "@glfw//:src",
         "@glm",
