@@ -20,7 +20,7 @@ vec4 hamiltonProduct(vec4 q1, const vec4 q2) {
 vec3 rotateByQuat(vec3 v, vec4 q) {
   vec4 qPrime = vec4(-q.x, -q.y, -q.z, q.w);
   vec4 vPrime = hamiltonProduct(hamiltonProduct(q, vec4(v.x, v.y, v.z, 0.0)), qPrime);
-  return glm::vec3(vPrime.x, vPrime.y, vPrime.z);
+  return vec3(vPrime.x, vPrime.y, vPrime.z);
 }
 
 
