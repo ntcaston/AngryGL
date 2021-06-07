@@ -2,7 +2,7 @@
 
 OpenGL clone of the [Unity Angry Bots ECS sample project](https://github.com/UnityTechnologies/AngryBots_ECS)
 
-I also made an [accompnaying video with some discussion](https://www.youtube.com/watch?v=tInaI3pU19Y).
+I also made an [accompanying video with some discussion](https://www.youtube.com/watch?v=tInaI3pU19Y).
 
 Code is pretty rough but may still prove useful for others doing something similar.
 
